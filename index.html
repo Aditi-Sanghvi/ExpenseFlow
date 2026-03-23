@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ExpenseFlow</title>
+    <link rel="stylesheet" href="css/style.css">
+
+    <link rel="icon" href="image/logo.png">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+     <!-- Navbar --> 
+    <header class="navbar">
+
+    <!-- LEFT: Logo -->
+    <div class="logo">
+        <img src="image/logo.jpg" alt="logo">
+        <span>ExpenseFlow</span>
+    </div>
+
+    <!-- CENTER: Date -->
+    <div class="date" id="currentDate"></div>
+
+    <!-- RIGHT: Profile -->
+    
+    <div class="profile">
+    👤
+    </div>
+
+</header>
+
+    <!-- Main Layout -->
+    <div class="container">
+        
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <ul>
+                <li class="active" id="navDashboard">🏠 Dashboard</li>
+                <li id="navPersonal">👤 Personal</li>
+                <li id="navGroup">👥 Groups</li>
+                <li id="navAnalytics">📊 Analytics</li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+
+            <h2 style="color: rgb(232, 203, 168) ; font-family: 'Times New Roman', Times, serif; font-size: 30px;">Dashboard </h2>
+            <p style="color: #22e3a3;;">Welcome to ExpenseFlow!</p><br>
+            
+
+          <div class="card-container">
+             <div class="card">
+             <h3>Total This Month</h3>
+        <div class="amount" id="totalAmount">₹0</div>
+    </div>
+
+    <div class="card">
+    <h3>👤 Personal Spending</h3>
+    <div class="amount" id="personalAmount">₹0</div>
+</div>
+
+<div class="card">
+    <h3>👥 Group Spending</h3>
+    <div class="amount" id="groupAmount">₹0</div>
+</div>
+</div>
+<input 
+    type="text" 
+    id="searchInput" 
+    placeholder="Search expenses..." 
+    style="width:100%; padding:10px; margin-bottom:15px; border-radius:8px; border:1px solid #ccc;"
+>
+<div style="margin-bottom:15px;">
+    <button class="filterBtn" data-category="All">All</button>
+    <button class="filterBtn" data-category="Food">Food</button>
+    <button class="filterBtn" data-category="Travel">Travel</button>
+    <button class="filterBtn" data-category="Shopping">Shopping</button>
+    <button class="filterBtn" data-category="Bills">Bills</button>
+</div>
+<h3 style="margin-bottom: 15px;">Recent Expenses</h3>
+
+
+<button class="btn" id="addExpenseBtn">+ Add Expense</button>
+
+<div class="card" id="expenseForm" style="display: none; margin-top: 20px;">
+    <h3 style="margin-bottom: 15px;">Add New Expense</h3>
+
+    <input type="text" id="expenseName" placeholder="Expense Name" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+    
+    <input type="number" id="expenseAmount" placeholder="Amount" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+    <select id="expenseCategory" style="width:100%; padding:8px; margin-bottom:10px;">
+    <option value="">Select Category</option>
+    <option value="Food">Food</option>
+    <option value="Travel">Travel</option>
+    <option value="Shopping">Shopping</option>
+    <option value="Bills">Bills</option>
+    <option value="Other">Other</option>
+    </select>
+
+    <select id="expenseType">
+        <option value="">Select Type</option>
+        <option value="Personal">👤 Personal</option>
+        <option value="Group">👥 Group</option>
+    </select>
+    
+    <button class="btn" id="saveExpenseBtn">Save Expense</button>
+    
+    <p id="successMessage" style="color: green; display: none; margin-top:10px;">
+    Expense added successfully!
+</p>
+
+<p id="deleteMessage" style="color:red; display:none; margin-top:10px;">
+Expense deleted successfully!
+</p>
+</div>
+
+
+<div class="card" id="expenseList"></div>
+
+<div id="analyticsSection" style="display:none;">
+    <div class="card" style="margin-top:20px;">
+        <h3>Spending Analytics</h3>
+        <div class="chart-container">
+            <canvas id="expenseChart"></canvas>
+        </div>
+    </div>
+</div>
+</div>
+</main>
+    <script src="js/ui.js"></script>
+</body>
+</html>
