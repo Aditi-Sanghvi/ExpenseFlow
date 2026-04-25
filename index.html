@@ -5,11 +5,10 @@
     <title>ExpenseFlow</title>
     <link rel="stylesheet" href="css/style.css">
 
-    <link rel="icon" href="image/logo.png">
+    <link rel="icon" href="image/logo.jpg">
     
    
-    <script type="module" src="js/ui.js"></script>
-     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
      <!-- Navbar --> 
@@ -133,6 +132,26 @@
         <option value="Personal">👤 Personal</option>
         <option value="Group">👥 Group</option>
     </select>
+
+    <div id="groupSplitSection" style="display:none; margin-top:10px;">
+        <h4 style="margin: 10px 0;">Split details</h4>
+        <input
+            type="text"
+            id="groupParticipants"
+            placeholder="Participants (comma-separated, e.g. Alex, Sam, Priya)"
+            style="width: 100%; padding: 8px; margin-bottom: 10px;"
+        >
+        <select id="splitMethod" style="width:100%; padding:8px; margin-bottom:10px;">
+            <option value="equal">Split equally</option>
+            <option value="exact">Split by exact amounts</option>
+        </select>
+        <div id="splitDetails" class="split-details"></div>
+        <div id="splitResult" style="margin-top:10px; display:none;">
+            <h4 style="margin: 10px 0;">Split result</h4>
+            <ul id="splitResultList" style="padding-left:18px;"></ul>
+        </div>
+        <p id="splitError" style="color:#ef4444; display:none; margin-top:8px;"></p>
+    </div>
     
     <button class="btn" id="saveExpenseBtn">Save Expense</button>
     
@@ -160,6 +179,7 @@ Expense deleted successfully!
     </div>
 </div>
 </main>
+    <script src="js/firebase.js"></script>
     <script src="js/ui.js"></script>
 </body>
 </html>

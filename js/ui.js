@@ -1,4 +1,4 @@
-import { db, ref, push, onValue, remove } from "./firebase.js";
+// firebase.js exposes db/ref/push/onValue/remove as globals (for file:// compatibility)
 const addExpenseBtn = document.getElementById("addExpenseBtn");
 const expenseForm = document.getElementById("expenseForm");
 const saveExpenseBtn = document.getElementById("saveExpenseBtn");
@@ -11,6 +11,14 @@ const expenseType = document.getElementById("expenseType");
 
 const expenseList = document.getElementById("expenseList");
 const successMessage = document.getElementById("successMessage");
+
+const groupSplitSection = document.getElementById("groupSplitSection");
+const groupParticipants = document.getElementById("groupParticipants");
+const splitMethod = document.getElementById("splitMethod");
+const splitDetails = document.getElementById("splitDetails");
+const splitError = document.getElementById("splitError");
+const splitResult = document.getElementById("splitResult");
+const splitResultList = document.getElementById("splitResultList");
 
 const totalAmount = document.getElementById("totalAmount");
 const deleteMessage = document.getElementById("deleteMessage");
@@ -28,6 +36,8 @@ const analyticsSection = document.getElementById("analyticsSection");
 const personalBudgetInput = document.getElementById("personalBudgetInput");
 const groupBudgetInput = document.getElementById("groupBudgetInput");
 
+const setPersonalBudgetBtn = document.getElementById("setPersonalBudgetBtn");
+const setGroupBudgetBtn = document.getElementById("setGroupBudgetBtn");
 
 const personalBudgetStatus = document.getElementById("personalBudgetStatus");
 const groupBudgetStatus = document.getElementById("groupBudgetStatus");
@@ -60,6 +70,189 @@ addExpenseBtn.addEventListener("click", function () {
     expenseForm.style.display = "block";
 });
 
+function parseParticipants(raw) {
+    return raw
+        .split(",")
+        .map(s => s.trim())
+        .filter(Boolean)
+        .filter((name, idx, arr) => arr.indexOf(name) === idx);
+}
+
+function moneyRound(n) {
+    return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+}
+
+function showSplitError(message) {
+    splitError.textContent = message;
+    splitError.style.display = message ? "block" : "none";
+}
+
+function renderSplitResultList(splits) {
+    if (!splitResult || !splitResultList) return;
+    splitResultList.innerHTML = "";
+
+    splits.forEach((s) => {
+        const li = document.createElement("li");
+        li.textContent = `${s.name}: ₹${moneyRound(s.amount)}`;
+        splitResultList.appendChild(li);
+    });
+
+    splitResult.style.display = "block";
+}
+
+function hideSplitResult() {
+    if (!splitResult || !splitResultList) return;
+    splitResult.style.display = "none";
+    splitResultList.innerHTML = "";
+}
+
+function renderSplitInputs(participants) {
+    splitDetails.innerHTML = "";
+    const method = splitMethod.value;
+    showSplitError("");
+    hideSplitResult();
+
+    if (method !== "exact") return;
+
+    participants.forEach((p) => {
+        const row = document.createElement("div");
+        row.className = "split-row";
+        row.innerHTML = `
+            <input type="text" value="${p}" disabled>
+            <input type="number" min="0" step="0.01" data-person="${p}" placeholder="₹0.00">
+        `;
+        splitDetails.appendChild(row);
+    });
+
+    // live update while typing exact amounts
+    splitDetails.querySelectorAll("input[data-person]").forEach((inp) => {
+        inp.addEventListener("input", liveUpdateSplitPreview);
+    });
+}
+
+function liveUpdateSplitPreview() {
+    if (expenseType.value !== "Group") return;
+
+    const amount = Number(expenseAmount.value);
+    if (!amount || amount <= 0) {
+        hideSplitResult();
+        return;
+    }
+
+    const participants = parseParticipants(groupParticipants.value);
+    if (participants.length < 2) {
+        hideSplitResult();
+        return;
+    }
+
+    // For "equal" we can always compute instantly.
+    if (splitMethod.value === "equal") {
+        const res = buildSplits(amount, participants);
+        if (res.ok) renderSplitResultList(res.splits);
+        else hideSplitResult();
+        return;
+    }
+
+    // For "exact" show preview only if user entered values and sum matches.
+    const inputs = Array.from(splitDetails.querySelectorAll("input[data-person]"));
+    if (inputs.length === 0) {
+        hideSplitResult();
+        return;
+    }
+
+    const res = buildSplits(amount, participants);
+    if (res.ok) {
+        renderSplitResultList(res.splits);
+        showSplitError("");
+    } else {
+        hideSplitResult();
+        // show a gentle hint while typing (don’t block saving unless user clicks Save)
+        showSplitError(res.error);
+    }
+}
+
+function updateSplitVisibility() {
+    const isGroup = expenseType.value === "Group";
+    groupSplitSection.style.display = isGroup ? "block" : "none";
+    showSplitError("");
+    hideSplitResult();
+
+    if (!isGroup) {
+        groupParticipants.value = "";
+        splitMethod.value = "equal";
+        splitDetails.innerHTML = "";
+    } else {
+        const participants = parseParticipants(groupParticipants.value);
+        renderSplitInputs(participants);
+        liveUpdateSplitPreview();
+    }
+}
+
+expenseType.addEventListener("change", updateSplitVisibility);
+groupParticipants.addEventListener("input", () => {
+    if (expenseType.value !== "Group") return;
+    renderSplitInputs(parseParticipants(groupParticipants.value));
+    liveUpdateSplitPreview();
+});
+splitMethod.addEventListener("change", () => {
+    if (expenseType.value !== "Group") return;
+    renderSplitInputs(parseParticipants(groupParticipants.value));
+    liveUpdateSplitPreview();
+});
+expenseAmount.addEventListener("input", () => {
+    if (expenseType.value !== "Group") return;
+    liveUpdateSplitPreview();
+});
+
+function buildSplits(totalAmount, participants) {
+    const method = splitMethod.value;
+
+    if (participants.length < 2) {
+        return { ok: false, error: "Add at least 2 participants to split a group expense." };
+    }
+
+    if (method === "equal") {
+        const base = moneyRound(totalAmount / participants.length);
+        const splits = participants.map((name) => ({ name, amount: base }));
+        const sum = moneyRound(splits.reduce((acc, s) => acc + s.amount, 0));
+        const diff = moneyRound(totalAmount - sum);
+        splits[0].amount = moneyRound(splits[0].amount + diff); // fix rounding remainder
+        return { ok: true, splits, method };
+    }
+
+    // exact
+    const inputs = Array.from(splitDetails.querySelectorAll("input[data-person]"));
+    const splits = inputs.map((inp) => ({
+        name: inp.dataset.person,
+        amount: moneyRound(Number(inp.value || 0)),
+    }));
+
+    const sum = moneyRound(splits.reduce((acc, s) => acc + s.amount, 0));
+    if (sum !== moneyRound(totalAmount)) {
+        return { ok: false, error: `Split amounts must add up to ₹${moneyRound(totalAmount)} (currently ₹${sum}).` };
+    }
+
+    return { ok: true, splits, method };
+}
+
+function formatSplitHint(exp) {
+    if (!exp.splits || !Array.isArray(exp.splits) || exp.splits.length === 0) return "";
+    const preview = exp.splits
+        .slice(0, 3)
+        .map(s => `${s.name}: ₹${s.amount}`)
+        .join(", ");
+    const extra = exp.splits.length > 3 ? ` +${exp.splits.length - 3} more` : "";
+    return `Split (${exp.splitMethod || "equal"}): ${preview}${extra}`;
+}
+
+function formatSavedSplitList(exp) {
+    if (!exp.splits || !Array.isArray(exp.splits) || exp.splits.length === 0) return "";
+    const items = exp.splits
+        .map(s => `<li>${s.name}: ₹${moneyRound(s.amount)}</li>`)
+        .join("");
+    return `<ul class="split-saved">${items}</ul>`;
+}
+
 
 // Save expense
 saveExpenseBtn.addEventListener("click", function () {
@@ -80,6 +273,17 @@ saveExpenseBtn.addEventListener("click", function () {
         category: category,
         type: type
     };
+
+    if (type === "Group") {
+        const participants = parseParticipants(groupParticipants.value);
+        const res = buildSplits(amount, participants);
+        if (!res.ok) {
+            showSplitError(res.error);
+            return;
+        }
+        expense.splits = res.splits;
+        expense.splitMethod = res.method;
+    }
    
 
    saveToFirebase(expense);
@@ -94,6 +298,7 @@ saveExpenseBtn.addEventListener("click", function () {
     expenseAmount.value = "";
     expenseCategory.value = "";
     expenseType.value = "";
+    updateSplitVisibility();
 });
 
 
@@ -164,8 +369,14 @@ if(exp.type === "Personal"){
 document.getElementById("personalAmount").textContent = "₹" + personalTotal;
 document.getElementById("groupAmount").textContent = "₹" + groupTotal;
 
+    const splitHint = exp.type === "Group" ? formatSplitHint(exp) : "";
+    const splitList = exp.type === "Group" ? formatSavedSplitList(exp) : "";
     row.innerHTML = `
-       <span>${emoji} ${exp.name}</span>
+       <span>
+            ${emoji} ${exp.name}
+            ${splitHint ? `<div class="split-hint">${splitHint}</div>` : ``}
+            ${splitList ? `${splitList}` : ``}
+       </span>
         <span style="color:#10b981;">₹${exp.amount}</span>
         <span class="category ${exp.category}">${exp.category}</span>
         <button class="deleteBtn">Delete</button>
@@ -320,7 +531,7 @@ navGroup.addEventListener("click", function(){
     recalculateTotals(filtered);
 });
 
-setPersonalBudgetBtn.addEventListener("click", function(){
+if (setPersonalBudgetBtn) setPersonalBudgetBtn.addEventListener("click", function(){
     personalBudget = Number(personalBudgetInput.value);
 
     if(personalBudget <= 0){
@@ -331,7 +542,7 @@ setPersonalBudgetBtn.addEventListener("click", function(){
     updateBudgetUI();
 });
 
-setGroupBudgetBtn.addEventListener("click", function(){
+if (setGroupBudgetBtn) setGroupBudgetBtn.addEventListener("click", function(){
     groupBudget = Number(groupBudgetInput.value);
 
     if(groupBudget <= 0){
