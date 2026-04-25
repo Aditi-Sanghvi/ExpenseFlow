@@ -23,10 +23,25 @@ const navAnalytics = document.getElementById("navAnalytics");
 const dashboardSection = document.getElementById("dashboardSection");
 const analyticsSection = document.getElementById("analyticsSection");
 
+
+const personalBudgetInput = document.getElementById("personalBudgetInput");
+const groupBudgetInput = document.getElementById("groupBudgetInput");
+
+
+const personalBudgetStatus = document.getElementById("personalBudgetStatus");
+const groupBudgetStatus = document.getElementById("groupBudgetStatus");
+const personalProgress = document.getElementById("personalProgress");
+const groupProgress = document.getElementById("groupProgress");
+
+let personalBudget = 0;
+let groupBudget = 0;
+let budget = 0;
+
 let personalTotal = 0;
 let groupTotal = 0;
 
 let expenses = [];
+
 
 let total = 0;
 
@@ -71,49 +86,20 @@ saveExpenseBtn.addEventListener("click", function () {
 
     saveToLocalStorage();
 
-    // success message
     successMessage.style.display = "block";
 
     setTimeout(function(){
         successMessage.style.display = "none";
     },2000);
 
-    // clear inputs
+
     expenseName.value = "";
     expenseAmount.value = "";
     expenseCategory.value = "";
     expenseType.value = "";
 });
-const ctx = document.getElementById('expenseChart');
 
-const expenseChart = new Chart(ctx, {
-    type: 'pie',
-    data: {
-        labels: ['Food', 'Travel', 'Shopping', 'Bills', 'Other'],
-        datasets: [{
-            data: [0,0,0,0,0],
-            backgroundColor: [
-                '#22c55e',
-                '#3b82f6',
-                '#a855f7',
-                '#ef4444',
-                '#6b7280'
-            ]
-        }]
-    }
-});
 
-function updateChart(){
-    expenseChart.data.datasets[0].data = [
-        categoryTotals.Food,
-        categoryTotals.Travel,
-        categoryTotals.Shopping,
-        categoryTotals.Bills,
-        categoryTotals.Other
-    ];
-
-    expenseChart.update();
-}
 
 function saveToLocalStorage(){
     localStorage.setItem("expenses", JSON.stringify(expenses));
@@ -148,6 +134,7 @@ if(exp.type === "Personal"){
     groupTotal += exp.amount;
 }
 
+
 document.getElementById("personalAmount").textContent = "₹" + personalTotal;
 document.getElementById("groupAmount").textContent = "₹" + groupTotal;
 
@@ -167,6 +154,7 @@ document.getElementById("groupAmount").textContent = "₹" + groupTotal;
     categoryTotals[exp.category] += exp.amount;
     updateChart();
 
+    updateBudgetUI();
     // delete logic
     const deleteBtn = row.querySelector(".deleteBtn");
 
@@ -187,9 +175,10 @@ document.getElementById("groupAmount").textContent = "₹" + groupTotal;
         categoryTotals[exp.category] -= exp.amount;
         updateChart();
 
-        // remove from array
         expenses = expenses.filter(e => e !== exp);
         saveToLocalStorage();
+
+        updateBudgetUI();
         
     });
 }
@@ -212,10 +201,8 @@ searchInput.addEventListener("input", function(){
 filterButtons.forEach(button => {
     button.addEventListener("click", function(){
 
-        // 🔹 remove active from all
         filterButtons.forEach(btn => btn.classList.remove("active"));
 
-        // 🔹 add active to clicked
         this.classList.add("active");
 
         const category = this.dataset.category;
@@ -251,11 +238,45 @@ navDashboard.addEventListener("click", function(){
     analyticsSection.style.display = "none";
 });
 
+let expenseChart = null;
+
 navAnalytics.addEventListener("click", function(){
+
     setActive(this);
 
     dashboardSection.style.display = "none";
     analyticsSection.style.display = "block";
+
+    const canvas = document.getElementById("expenseChart");
+
+    // 🔥 CREATE CHART ONLY ONCE (WHEN VISIBLE)
+    if(!expenseChart){
+        const ctx = canvas.getContext("2d");
+
+        expenseChart = new Chart(ctx, {
+            type: "pie",
+            data: {
+                labels: ["Food", "Travel", "Shopping", "Bills", "Other"],
+                datasets: [{
+                    data: [1, 1, 1, 1, 1],
+                    backgroundColor: [
+                        "#22c55e",
+                        "#3b82f6",
+                        "#a855f7",
+                        "#ef4444",
+                        "#6b7280"
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+
+    updateChart();
 });
 navPersonal.addEventListener("click", function(){
     setActive(this);
@@ -265,14 +286,11 @@ navPersonal.addEventListener("click", function(){
 
     expenseList.innerHTML = "";
 
-    total = 0;
-    personalTotal = 0;
-    groupTotal = 0;
-    categoryTotals = { Food:0, Travel:0, Shopping:0, Bills:0, Other:0 };
+    const filtered = expenses.filter(exp => exp.type === "Personal");
 
-    expenses
-        .filter(exp => exp.type === "Personal")
-        .forEach(exp => addExpenseToUI(exp));
+    filtered.forEach(exp => addExpenseToUI(exp));
+
+    recalculateTotals(filtered); 
 });
 navGroup.addEventListener("click", function(){
     setActive(this);
@@ -282,12 +300,78 @@ navGroup.addEventListener("click", function(){
 
     expenseList.innerHTML = "";
 
+    const filtered = expenses.filter(exp => exp.type === "Group");
+
+    filtered.forEach(exp => addExpenseToUI(exp));
+
+    recalculateTotals(filtered);
+});
+
+setPersonalBudgetBtn.addEventListener("click", function(){
+    personalBudget = Number(personalBudgetInput.value);
+
+    if(personalBudget <= 0){
+        alert("Enter valid personal budget");
+        return;
+    }
+
+    updateBudgetUI();
+});
+
+setGroupBudgetBtn.addEventListener("click", function(){
+    groupBudget = Number(groupBudgetInput.value);
+
+    if(groupBudget <= 0){
+        alert("Enter valid group budget");
+        return;
+    }
+
+    updateBudgetUI();
+});
+function updateChart(){
+    if(!expenseChart) return;
+
+    const data = [
+        categoryTotals.Food,
+        categoryTotals.Travel,
+        categoryTotals.Shopping,
+        categoryTotals.Bills,
+        categoryTotals.Other
+    ];
+
+    if(data.every(val => val === 0)){
+        expenseChart.data.datasets[0].data = [1,1,1,1,1];
+    } else {
+        expenseChart.data.datasets[0].data = data;
+    }
+
+    expenseChart.update();
+}
+function recalculateTotals(filteredExpenses){
+
     total = 0;
     personalTotal = 0;
     groupTotal = 0;
+
     categoryTotals = { Food:0, Travel:0, Shopping:0, Bills:0, Other:0 };
 
-    expenses
-        .filter(exp => exp.type === "Group")
-        .forEach(exp => addExpenseToUI(exp));
-});
+    filteredExpenses.forEach(exp => {
+
+        total += exp.amount;
+
+        if(exp.type === "Personal"){
+            personalTotal += exp.amount;
+        } else {
+            groupTotal += exp.amount;
+        }
+
+        categoryTotals[exp.category] += exp.amount;
+    });
+
+    totalAmount.textContent = "₹" + total;
+    document.getElementById("personalAmount").textContent = "₹" + personalTotal;
+    document.getElementById("groupAmount").textContent = "₹" + groupTotal;
+
+    updateChart();
+}
+

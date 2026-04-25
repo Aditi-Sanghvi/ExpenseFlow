@@ -12,17 +12,13 @@
 <body>
      <!-- Navbar --> 
     <header class="navbar">
-
-    <!-- LEFT: Logo -->
     <div class="logo">
         <img src="image/logo.jpg" alt="logo">
-        <span>ExpenseFlow</span>
+        <span style="color: rgb(32, 10, 172); font-weight: 10px;">ExpenseFlow</span>
     </div>
 
-    <!-- CENTER: Date -->
     <div class="date" id="currentDate"></div>
 
-    <!-- RIGHT: Profile -->
     
     <div class="profile">
     👤
@@ -44,7 +40,9 @@
         </aside>
 
         <!-- Main Content -->
+         
         <main class="main-content">
+            <div id="dashboardSection"> 
 
             <h2 style="color: rgb(232, 203, 168) ; font-family: 'Times New Roman', Times, serif; font-size: 30px;">Dashboard </h2>
             <p style="color: #22e3a3;;">Welcome to ExpenseFlow!</p><br>
@@ -66,6 +64,35 @@
     <div class="amount" id="groupAmount">₹0</div>
 </div>
 </div>
+
+<div class="card" style="margin-top:20px;">
+    <h3>💰 Monthly Budget</h3>
+
+ <!-- Personal Budget -->
+<input type="number" id="personalBudgetInput" placeholder="Set Personal Budget">
+<button class="btn" id="setPersonalBudgetBtn">Set Personal</button>
+
+<p id="personalBudgetStatus">No personal budget</p>
+
+<!-- ✅ ADD THIS -->
+<div class="progress-bar">
+    <div id="personalProgress"></div>
+</div>
+
+<hr style="margin:15px 0;">
+
+<!-- Group Budget -->
+<input type="number" id="groupBudgetInput" placeholder="Set Group Budget">
+<button class="btn" id="setGroupBudgetBtn">Set Group</button>
+
+<p id="groupBudgetStatus">No group budget</p>
+
+<!-- ✅ ADD THIS -->
+<div class="progress-bar">
+    <div id="groupProgress"></div>
+</div>
+<br>
+<h3 style="margin-bottom: 15px; color: silver;">Recent Expenses</h3>
 <input 
     type="text" 
     id="searchInput" 
@@ -79,7 +106,7 @@
     <button class="filterBtn" data-category="Shopping">Shopping</button>
     <button class="filterBtn" data-category="Bills">Bills</button>
 </div>
-<h3 style="margin-bottom: 15px;">Recent Expenses</h3>
+
 
 
 <button class="btn" id="addExpenseBtn">+ Add Expense</button>
@@ -118,15 +145,17 @@ Expense deleted successfully!
 
 
 <div class="card" id="expenseList"></div>
+</div>
 
+
+</div>
 <div id="analyticsSection" style="display:none;">
     <div class="card" style="margin-top:20px;">
         <h3>Spending Analytics</h3>
-        <div class="chart-container">
+        <div class="chart-container" style="height: 300px;">
             <canvas id="expenseChart"></canvas>
         </div>
     </div>
-</div>
 </div>
 </main>
     <script src="js/ui.js"></script>
