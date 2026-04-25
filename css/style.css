@@ -241,8 +241,12 @@ body{
 .chart-container{
     width:100%;
     max-width:400px;
-    height:300px;
+    height:400px;
     margin:20px auto;
+}
+#expenseChart{
+    width: 100% !important;
+    height: 100% !important;
 }
 .filterBtn{
     padding:6px 12px;

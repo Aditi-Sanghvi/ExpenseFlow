@@ -1,3 +1,4 @@
+import { db, ref, push, onValue, remove } from "./firebase.js";
 const addExpenseBtn = document.getElementById("addExpenseBtn");
 const expenseForm = document.getElementById("expenseForm");
 const saveExpenseBtn = document.getElementById("saveExpenseBtn");
@@ -33,6 +34,7 @@ const groupBudgetStatus = document.getElementById("groupBudgetStatus");
 const personalProgress = document.getElementById("personalProgress");
 const groupProgress = document.getElementById("groupProgress");
 
+let expenseChart = null;
 let personalBudget = 0;
 let groupBudget = 0;
 let budget = 0;
@@ -78,14 +80,9 @@ saveExpenseBtn.addEventListener("click", function () {
         category: category,
         type: type
     };
-
    
-    expenses.push(expense);
 
-    addExpenseToUI(expense);
-
-    saveToLocalStorage();
-
+   saveToFirebase(expense);
     successMessage.style.display = "block";
 
     setTimeout(function(){
@@ -100,22 +97,51 @@ saveExpenseBtn.addEventListener("click", function () {
 });
 
 
-
-function saveToLocalStorage(){
-    localStorage.setItem("expenses", JSON.stringify(expenses));
-
+function saveToFirebase(expense){
+    push(ref(db, "expenses"), expense);
 }
 
-function loadFromLocalStorage(){
-    const data = localStorage.getItem("expenses");
+function loadFromFirebase(){
 
-    if(data){
-        expenses = JSON.parse(data);
+    const expenseRef = ref(db, "expenses");
 
-        expenses.forEach(exp => {
-            addExpenseToUI(exp);
-        });
-    }
+    onValue(expenseRef, (snapshot) => {
+
+        console.log("Snapshot:", snapshot.val());
+
+        expenseList.innerHTML = "";
+
+        total = 0;
+        personalTotal = 0;
+        groupTotal = 0;
+
+        categoryTotals = {
+            Food: 0,
+            Travel: 0,
+            Shopping: 0,
+            Bills: 0,
+            Other: 0
+        };
+
+        expenses = [];
+
+        const data = snapshot.val();
+
+        if(data){
+            Object.keys(data).forEach(key => {
+
+                const exp = data[key];
+                exp.id = key;
+
+                expenses.push(exp);
+
+                addExpenseToUI(exp);
+            });
+        }
+
+        updateBudgetUI();
+         updateChart();
+    });
 }
 function addExpenseToUI(exp){
 
@@ -158,27 +184,10 @@ document.getElementById("groupAmount").textContent = "₹" + groupTotal;
     // delete logic
     const deleteBtn = row.querySelector(".deleteBtn");
 
-    deleteBtn.addEventListener("click", function(){
-        if(exp.type === "Personal"){
-    personalTotal -= exp.amount;
-} else {
-    groupTotal -= exp.amount;
-}
+deleteBtn.addEventListener("click", function(){
 
-document.getElementById("personalAmount").textContent = "₹" + personalTotal;
-document.getElementById("groupAmount").textContent = "₹" + groupTotal;
-        expenseList.removeChild(row);
-
-        total -= exp.amount;
-        totalAmount.textContent = "₹" + total;
-
-        categoryTotals[exp.category] -= exp.amount;
-        updateChart();
-
-        expenses = expenses.filter(e => e !== exp);
-        saveToLocalStorage();
-
-        updateBudgetUI();
+    // 🔥 DELETE FROM FIREBASE
+    remove(ref(db, "expenses/" + exp.id));
         
     });
 }
@@ -238,7 +247,7 @@ navDashboard.addEventListener("click", function(){
     analyticsSection.style.display = "none";
 });
 
-let expenseChart = null;
+
 
 navAnalytics.addEventListener("click", function(){
 
@@ -249,34 +258,38 @@ navAnalytics.addEventListener("click", function(){
 
     const canvas = document.getElementById("expenseChart");
 
-    // 🔥 CREATE CHART ONLY ONCE (WHEN VISIBLE)
-    if(!expenseChart){
-        const ctx = canvas.getContext("2d");
+    // 🔥 WAIT for DOM to render
+    setTimeout(() => {
 
-        expenseChart = new Chart(ctx, {
-            type: "pie",
-            data: {
-                labels: ["Food", "Travel", "Shopping", "Bills", "Other"],
-                datasets: [{
-                    data: [1, 1, 1, 1, 1],
-                    backgroundColor: [
-                        "#22c55e",
-                        "#3b82f6",
-                        "#a855f7",
-                        "#ef4444",
-                        "#6b7280"
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
-            }
-        });
-    }
+        if(!expenseChart){
+            const ctx = canvas.getContext("2d");
 
+            expenseChart = new Chart(ctx, {
+                type: "pie",
+                data: {
+                    labels: ["Food", "Travel", "Shopping", "Bills", "Other"],
+                    datasets: [{
+                        data: [1,1,1,1,1],
+                        backgroundColor: [
+                            "#22c55e",
+                            "#3b82f6",
+                            "#a855f7",
+                            "#ef4444",
+                            "#6b7280"
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
 
-    updateChart();
+        updateChart(); // 🔥 update AFTER render
+
+    }, 200); // small delay
+
 });
 navPersonal.addEventListener("click", function(){
     setActive(this);
@@ -373,5 +386,37 @@ function recalculateTotals(filteredExpenses){
     document.getElementById("groupAmount").textContent = "₹" + groupTotal;
 
     updateChart();
-}
+} 
+function updateBudgetUI(){
 
+    // PERSONAL
+    if(personalBudget > 0){
+
+        const percent = Math.min((personalTotal / personalBudget) * 100, 100);
+
+        personalProgress.style.width = percent + "%";
+
+        personalBudgetStatus.textContent =
+            `₹${personalTotal} / ₹${personalBudget}`;
+
+    } else {
+        personalBudgetStatus.textContent = "No personal budget";
+        personalProgress.style.width = "0%";
+    }
+
+    // GROUP
+    if(groupBudget > 0){
+
+        const percent = Math.min((groupTotal / groupBudget) * 100, 100);
+
+        groupProgress.style.width = percent + "%";
+
+        groupBudgetStatus.textContent =
+            `₹${groupTotal} / ₹${groupBudget}`;
+
+    } else {
+        groupBudgetStatus.textContent = "No group budget";
+        groupProgress.style.width = "0%";
+    }
+}
+loadFromFirebase();
