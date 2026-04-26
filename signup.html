@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign Up • ExpenseFlow</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="icon" href="image/logo.jpg">
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">
+      <img src="image/logo.jpg" alt="logo">
+      <span style="color: rgb(32, 10, 172); font-weight: 10px;">ExpenseFlow</span>
+    </div>
+    <div></div>
+    <div></div>
+  </header>
+
+  <div class="container" style="height: calc(100vh - 65px);">
+    <main class="main-content" style="max-width:520px; margin:0 auto;">
+      <div class="card" style="margin-top:30px;">
+        <h2 style="margin-bottom:8px;">Create account</h2>
+        <p style="color:#64748b; margin-bottom:16px;">Sign up to start tracking expenses.</p>
+
+        <input id="signupEmail" type="email" placeholder="Email" autocomplete="email" />
+        <input id="signupPassword" type="password" placeholder="Password (min 6 chars)" autocomplete="new-password" />
+        <input id="signupPassword2" type="password" placeholder="Confirm password" autocomplete="new-password" />
+
+        <button id="signupBtn" type="button" class="btn" style="width:100%;">Sign up</button>
+        <p id="signupError" style="color:#ef4444; display:none; margin-top:10px;"></p>
+        <p id="signupOk" style="color:#10b981; display:none; margin-top:10px;"></p>
+
+        <hr style="margin:16px 0;">
+        <p style="color:#64748b;">
+          Already have an account?
+          <a href="login.html">Login</a>
+        </p>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script>
+    if (window.__expenseflow_signup_init__) {
+      // Prevent double-execution (can happen with certain reload/iframe cases)
+      // which would redeclare const bindings.
+      throw new Error("Signup already initialized");
+    }
+    window.__expenseflow_signup_init__ = true;
+
+    const auth = window.ExpenseFlowAuth;
+    if (!auth) {
+      // If this triggers, the most common cause is opening the wrong file path
+      // or the browser blocking access to js/auth.js.
+      alert("Auth script failed to load. Please reopen this page from the same folder as index.html.");
+      throw new Error("ExpenseFlowAuth not loaded");
+    }
+
+    const { readUsers, writeUsers, setSession, simpleHash, getSession } = auth;
+
+    const existing = getSession();
+    if (existing && existing.email) window.location.href = "index.html";
+
+    const emailEl = document.getElementById("signupEmail");
+    const passEl = document.getElementById("signupPassword");
+    const pass2El = document.getElementById("signupPassword2");
+    const btn = document.getElementById("signupBtn");
+    const err = document.getElementById("signupError");
+    const ok = document.getElementById("signupOk");
+
+    function showError(msg) {
+      err.textContent = msg;
+      err.style.display = msg ? "block" : "none";
+    }
+    function showOk(msg) {
+      ok.textContent = msg;
+      ok.style.display = msg ? "block" : "none";
+    }
+
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      showError("");
+      showOk("");
+
+      const email = (emailEl.value || "").trim().toLowerCase();
+      const p1 = passEl.value || "";
+      const p2 = pass2El.value || "";
+
+      if (!email || !p1 || !p2) {
+        showError("Fill all fields.");
+        return;
+      }
+      if (p1.length < 6) {
+        showError("Password must be at least 6 characters.");
+        return;
+      }
+      if (p1 !== p2) {
+        showError("Passwords do not match.");
+        return;
+      }
+
+      const users = readUsers();
+      if (users[email]) {
+        showError("Account already exists. Please login.");
+        return;
+      }
+
+      users[email] = { passwordHash: simpleHash(p1), createdAt: Date.now() };
+      writeUsers(users);
+      setSession(email);
+      showOk("Account created. Redirecting…");
+      setTimeout(() => (window.location.href = "index.html"), 600);
+    });
+  </script>
+</body>
+</html>
+
