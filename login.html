@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login • ExpenseFlow</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="icon" href="image/logo.jpg">
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">
+      <img src="image/logo.jpg" alt="logo">
+      <span style="color: rgb(32, 10, 172); font-weight: 10px;">ExpenseFlow</span>
+    </div>
+    <div></div>
+    <div></div>
+  </header>
+
+  <div class="container" style="height: calc(100vh - 65px);">
+    <main class="main-content" style="max-width:520px; margin:0 auto;">
+      <div class="card" style="margin-top:30px;">
+        <h2 style="margin-bottom:8px;">Login</h2>
+        <p style="color:#64748b; margin-bottom:16px;">Access your ExpenseFlow dashboard.</p>
+
+        <input id="loginEmail" type="email" placeholder="Email" autocomplete="email" />
+        <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password" />
+
+        <button id="loginBtn" type="button" class="btn" style="width:100%;">Login</button>
+        <p id="loginError" style="color:#ef4444; display:none; margin-top:10px;"></p>
+
+        <hr style="margin:16px 0;">
+        <p style="color:#64748b;">
+          Don’t have an account?
+          <a href="signup.html">Sign up</a>
+        </p>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script>
+    if (window.__expenseflow_login_init__) {
+      throw new Error("Login already initialized");
+    }
+    window.__expenseflow_login_init__ = true;
+
+    const auth = window.ExpenseFlowAuth;
+    if (!auth) {
+      alert("Auth script failed to load. Please reopen this page from the same folder as index.html.");
+      throw new Error("ExpenseFlowAuth not loaded");
+    }
+
+    const { readUsers, setSession, simpleHash, getSession } = auth;
+
+    const existing = getSession();
+    if (existing && existing.email) window.location.href = "index.html";
+
+    const emailEl = document.getElementById("loginEmail");
+    const passEl = document.getElementById("loginPassword");
+    const btn = document.getElementById("loginBtn");
+    const err = document.getElementById("loginError");
+
+    function showError(msg) {
+      err.textContent = msg;
+      err.style.display = msg ? "block" : "none";
+    }
+
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const email = (emailEl.value || "").trim().toLowerCase();
+      const password = passEl.value || "";
+
+      if (!email || !password) {
+        showError("Enter email and password.");
+        return;
+      }
+
+      const users = readUsers();
+      const user = users[email];
+      if (!user || user.passwordHash !== simpleHash(password)) {
+        showError("Invalid email or password.");
+        return;
+      }
+
+      setSession(email);
+      window.location.href = "index.html";
+    });
+  </script>
+</body>
+</html>
+
