@@ -1,4 +1,14 @@
-// firebase.js exposes db/ref/push/onValue/remove as globals (for file:// compatibility)
+import { db, ref, push, onValue, remove } from "./firebase.js";
+document.addEventListener("DOMContentLoaded", function(){
+
+const auth = window.ExpenseFlowAuth;
+const session = auth.getSession();
+
+// 🔒 If NOT logged in → go to login
+if (!session || !session.email) {
+    window.location.href = "login.html";
+}
+const currentUser = session.email.replace(/\./g, "_");
 const addExpenseBtn = document.getElementById("addExpenseBtn");
 const expenseForm = document.getElementById("expenseForm");
 const saveExpenseBtn = document.getElementById("saveExpenseBtn");
@@ -124,7 +134,6 @@ function renderSplitInputs(participants) {
         splitDetails.appendChild(row);
     });
 
-    // live update while typing exact amounts
     splitDetails.querySelectorAll("input[data-person]").forEach((inp) => {
         inp.addEventListener("input", liveUpdateSplitPreview);
     });
@@ -145,7 +154,6 @@ function liveUpdateSplitPreview() {
         return;
     }
 
-    // For "equal" we can always compute instantly.
     if (splitMethod.value === "equal") {
         const res = buildSplits(amount, participants);
         if (res.ok) renderSplitResultList(res.splits);
@@ -153,7 +161,6 @@ function liveUpdateSplitPreview() {
         return;
     }
 
-    // For "exact" show preview only if user entered values and sum matches.
     const inputs = Array.from(splitDetails.querySelectorAll("input[data-person]"));
     if (inputs.length === 0) {
         hideSplitResult();
@@ -166,7 +173,6 @@ function liveUpdateSplitPreview() {
         showSplitError("");
     } else {
         hideSplitResult();
-        // show a gentle hint while typing (don’t block saving unless user clicks Save)
         showSplitError(res.error);
     }
 }
@@ -220,7 +226,7 @@ function buildSplits(totalAmount, participants) {
         return { ok: true, splits, method };
     }
 
-    // exact
+
     const inputs = Array.from(splitDetails.querySelectorAll("input[data-person]"));
     const splits = inputs.map((inp) => ({
         name: inp.dataset.person,
@@ -303,12 +309,13 @@ saveExpenseBtn.addEventListener("click", function () {
 
 
 function saveToFirebase(expense){
-    push(ref(db, "expenses"), expense);
+    console.log("Saving:", expense); 
+    push(ref(db, "expenses/" + currentUser), expense);
 }
 
 function loadFromFirebase(){
 
-    const expenseRef = ref(db, "expenses");
+   const expenseRef = ref(db, "expenses/" + currentUser);
 
     onValue(expenseRef, (snapshot) => {
 
@@ -398,7 +405,7 @@ document.getElementById("groupAmount").textContent = "₹" + groupTotal;
 deleteBtn.addEventListener("click", function(){
 
     // 🔥 DELETE FROM FIREBASE
-    remove(ref(db, "expenses/" + exp.id));
+    remove(ref(db, "expenses/" + currentUser + "/" + exp.id));
         
     });
 }
@@ -531,7 +538,10 @@ navGroup.addEventListener("click", function(){
     recalculateTotals(filtered);
 });
 
-if (setPersonalBudgetBtn) setPersonalBudgetBtn.addEventListener("click", function(){
+setPersonalBudgetBtn.addEventListener("click", function(){
+
+    console.log("CLICKED"); 
+
     personalBudget = Number(personalBudgetInput.value);
 
     if(personalBudget <= 0){
@@ -539,7 +549,7 @@ if (setPersonalBudgetBtn) setPersonalBudgetBtn.addEventListener("click", functio
         return;
     }
 
-    updateBudgetUI();
+    personalBudgetStatus.textContent = `₹${personalTotal} / ₹${personalBudget}`;
 });
 
 if (setGroupBudgetBtn) setGroupBudgetBtn.addEventListener("click", function(){
@@ -631,3 +641,4 @@ function updateBudgetUI(){
     }
 }
 loadFromFirebase();
+});

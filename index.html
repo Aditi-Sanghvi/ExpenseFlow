@@ -185,20 +185,39 @@ Expense deleted successfully!
     </div>
 </div>
 </main>
-    <script src="js/firebase.js"></script>
-    <script src="js/ui.js"></script>
-    <script>
-      const session = window.ExpenseFlowAuth && window.ExpenseFlowAuth.getSession ? window.ExpenseFlowAuth.getSession() : null;
-      const emailEl = document.getElementById("currentUserEmail");
-      if (emailEl) emailEl.textContent = session && session.email ? session.email : "";
+<!-- ✅ LOAD AUTH FIRST -->
+<script src="js/auth.js"></script>
 
-      const profile = document.getElementById("profileMenu");
-      if (profile && window.ExpenseFlowAuth) {
-        profile.addEventListener("click", () => {
-          window.ExpenseFlowAuth.clearSession();
-          window.location.href = "login.html";
-        });
-      }
-    </script>
+<!-- ✅ PROTECT PAGE -->
+<script>
+  const authSession = window.ExpenseFlowAuth.getSession();
+
+  if (!authSession || !authSession.email) {
+    window.location.href = "login.html";
+  }
+</script>
+
+
+
+<script type= "module" src="js/ui.js"></script>
+
+
+<script>
+  const userSession = window.ExpenseFlowAuth.getSession();
+
+  const emailEl = document.getElementById("currentUserEmail");
+  if (emailEl) {
+    emailEl.textContent = userSession?.email || "";
+  }
+
+  const profile = document.getElementById("profileMenu");
+  if (profile) {
+    profile.addEventListener("click", () => {
+      window.ExpenseFlowAuth.clearSession();
+      window.location.href = "login.html";
+    });
+  }
+</script>
+
 </body>
 </html>

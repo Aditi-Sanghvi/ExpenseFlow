@@ -28,8 +28,7 @@
   };
 
   const simpleHash = (str) => {
-    // Not secure; just avoids storing raw password in this demo app.
-    // If you later add a backend, move hashing server-side.
+
     let h = 0;
     for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
     return h.toString(16);
