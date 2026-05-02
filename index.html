@@ -13,7 +13,6 @@
 <body>
     <script src="js/auth.js"></script>
     <script>
-      // Redirect to login if not authenticated
       if (window.ExpenseFlowAuth) window.ExpenseFlowAuth.requireAuth();
     </script>
      <!-- Navbar --> 
@@ -81,7 +80,6 @@
 
 <p id="personalBudgetStatus">No personal budget</p>
 
-<!-- ✅ ADD THIS -->
 <div class="progress-bar">
     <div id="personalProgress"></div>
 </div>
@@ -94,7 +92,6 @@
 
 <p id="groupBudgetStatus">No group budget</p>
 
-<!-- ✅ ADD THIS -->
 <div class="progress-bar">
     <div id="groupProgress"></div>
 </div>
@@ -185,10 +182,9 @@ Expense deleted successfully!
     </div>
 </div>
 </main>
-<!-- ✅ LOAD AUTH FIRST -->
+
 <script src="js/auth.js"></script>
 
-<!-- ✅ PROTECT PAGE -->
 <script>
   const authSession = window.ExpenseFlowAuth.getSession();
 
@@ -197,10 +193,7 @@ Expense deleted successfully!
   }
 </script>
 
-
-
 <script type= "module" src="js/ui.js"></script>
-
 
 <script>
   const userSession = window.ExpenseFlowAuth.getSession();

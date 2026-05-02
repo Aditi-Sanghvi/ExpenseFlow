@@ -3,8 +3,6 @@ document.addEventListener("DOMContentLoaded", function(){
 
 const auth = window.ExpenseFlowAuth;
 const session = auth.getSession();
-
-// 🔒 If NOT logged in → go to login
 if (!session || !session.email) {
     window.location.href = "login.html";
 }
@@ -75,7 +73,7 @@ let categoryTotals = {
     Other: 0
 };
 
-// Show form
+
 addExpenseBtn.addEventListener("click", function () {
     expenseForm.style.display = "block";
 });
